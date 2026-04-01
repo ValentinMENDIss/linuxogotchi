@@ -1,16 +1,19 @@
 package main
 
 import (
+	"fmt"
+
 	"log"
 	"math/rand"
+	"time"
 
 	"io/fs"
 	"os"
 	"path/filepath"
 
 	"github.com/gopxl/beep"
-
-	"fmt"
+	"github.com/gopxl/beep/flac"
+	"github.com/gopxl/beep/speaker"
 )
 
 // TODO:
@@ -19,7 +22,64 @@ import (
 const MUSIC_DIR string = "../data/music/"
 const sr beep.SampleRate = 44100
 
-func getMusicFiles() ([]string, error) {
+func Init() {
+	speaker.Init(sr, sr.N(time.Second))
+}
+
+func Play() {
+	queue, err := LoadMusicFiles()
+	Shuffle(&queue)
+
+	for true {
+		queue_length := len(queue)
+
+		if isQueueEmpty(queue, queue_length) {
+			queue, err = LoadMusicFiles()
+			if err != nil {
+				log.Print(err)
+			}
+
+			Shuffle(&queue)
+			queue_length = len(queue)
+		}
+
+		f := getFromQueue(queue)
+		streamer, format := decodeFlac(f)
+		defer streamer.Close()
+
+		resampled := beep.Resample(4, format.SampleRate, sr, streamer)
+
+		done := make(chan bool)
+		speaker.Play(beep.Seq(resampled, beep.Callback(func() {
+			done <- true
+		})))
+
+		<-done
+
+		queue = queue[1:queue_length]
+
+	}
+
+}
+
+func isQueueEmpty(files []string, queue_length int) (empty bool) {
+	if queue_length == 0 {
+		return true
+	}
+
+	return false
+}
+
+func decodeFlac(f *os.File) (streamer beep.StreamSeekCloser, format beep.Format) {
+	streamer, format, err := flac.Decode(f)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return streamer, format
+}
+
+func LoadMusicFiles() ([]string, error) {
 	var files []string
 
 	err := filepath.WalkDir(MUSIC_DIR, func(path string, entry fs.DirEntry, err error) error {
@@ -41,7 +101,7 @@ func getMusicFiles() ([]string, error) {
 	return files, err
 }
 
-func getMusicFile(files []string) *os.File {
+func getFromQueue(files []string) *os.File {
 	file_path := files[0]
 	f, err := os.Open(file_path)
 	if err != nil {
@@ -52,7 +112,7 @@ func getMusicFile(files []string) *os.File {
 }
 
 /* Fisher-Yates algorithm */
-func shuffle(files *[]string) {
+func Shuffle(files *[]string) {
 	last_index := len(*files) - 1
 	for true {
 		if last_index <= 0 {
