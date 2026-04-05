@@ -54,9 +54,9 @@ func Play() {
 		f, ext := getFromQueue(queue)
 		switch ext {
 		case ".flac":
-			streamer, format, err = flac.Decode(f)
+			streamer, format = decodeFLAC(f)
 		case ".mp3":
-			streamer, format, err = mp3.Decode(f)
+			streamer, format = decodeMP3(f)
 		}
 		defer streamer.Close()
 
@@ -75,8 +75,17 @@ func Play() {
 
 }
 
-func decodeFlac(f *os.File) (streamer beep.StreamSeekCloser, format beep.Format) {
+func decodeFLAC(f *os.File) (streamer beep.StreamSeekCloser, format beep.Format) {
 	streamer, format, err := flac.Decode(f)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return streamer, format
+}
+
+func decodeMP3(f *os.File) (streamer beep.StreamSeekCloser, format beep.Format) {
+	streamer, format, err := mp3.Decode(f)
 	if err != nil {
 		log.Fatal(err)
 	}
