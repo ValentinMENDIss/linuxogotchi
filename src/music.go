@@ -13,6 +13,7 @@ import (
 
 	"github.com/gopxl/beep"
 	"github.com/gopxl/beep/flac"
+	"github.com/gopxl/beep/mp3"
 	"github.com/gopxl/beep/speaker"
 )
 
@@ -21,6 +22,11 @@ import (
 
 const MUSIC_DIR string = "../data/music/"
 const sr beep.SampleRate = 44100
+
+type MusicFile struct {
+	FilePath      string
+	FileExtension string
+}
 
 func Init() {
 	speaker.Init(sr, sr.N(time.Second))
@@ -43,8 +49,15 @@ func Play() {
 			queue_length = len(queue)
 		}
 
-		f := getFromQueue(queue)
-		streamer, format := decodeFlac(f)
+		var streamer beep.StreamSeekCloser
+		var format beep.Format
+		f, ext := getFromQueue(queue)
+		switch ext {
+		case ".flac":
+			streamer, format, err = flac.Decode(f)
+		case ".mp3":
+			streamer, format, err = mp3.Decode(f)
+		}
 		defer streamer.Close()
 
 		resampled := beep.Resample(4, format.SampleRate, sr, streamer)
@@ -71,8 +84,8 @@ func decodeFlac(f *os.File) (streamer beep.StreamSeekCloser, format beep.Format)
 	return streamer, format
 }
 
-func LoadMusicFiles() ([]string, error) {
-	var files []string
+func LoadMusicFiles() ([]MusicFile, error) {
+	var files []MusicFile
 
 	err := filepath.WalkDir(MUSIC_DIR, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
@@ -81,9 +94,11 @@ func LoadMusicFiles() ([]string, error) {
 		if !entry.IsDir() {
 			switch filepath.Ext(entry.Name()) {
 			case ".flac":
-				files = append(files, path)
+				music_file := MusicFile{path, filepath.Ext(entry.Name())}
+				files = append(files, music_file)
 			case ".mp3":
-				files = append(files, path)
+				music_file := MusicFile{path, filepath.Ext(entry.Name())}
+				files = append(files, music_file)
 			}
 		}
 
@@ -93,18 +108,18 @@ func LoadMusicFiles() ([]string, error) {
 	return files, err
 }
 
-func getFromQueue(files []string) *os.File {
-	file_path := files[0]
+func getFromQueue(files []MusicFile) (*os.File, string) {
+	file_path := files[0].FilePath
 	f, err := os.Open(file_path)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	return f
+	return f, files[0].FileExtension
 }
 
 /* Fisher-Yates algorithm */
-func Shuffle(files *[]string) {
+func Shuffle(files *[]MusicFile) {
 	last_index := len(*files) - 1
 	for true {
 		if last_index <= 0 {
