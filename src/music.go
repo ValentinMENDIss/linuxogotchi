@@ -33,7 +33,7 @@ func Play() {
 	for true {
 		queue_length := len(queue)
 
-		if isQueueEmpty(queue, queue_length) {
+		if queue_length == 0 {
 			queue, err = LoadMusicFiles()
 			if err != nil {
 				log.Print(err)
@@ -60,14 +60,6 @@ func Play() {
 
 	}
 
-}
-
-func isQueueEmpty(files []string, queue_length int) (empty bool) {
-	if queue_length == 0 {
-		return true
-	}
-
-	return false
 }
 
 func decodeFlac(f *os.File) (streamer beep.StreamSeekCloser, format beep.Format) {
