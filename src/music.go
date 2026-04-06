@@ -26,8 +26,8 @@ const MUSIC_DIR string = "../data/music/"
 const sr beep.SampleRate = 44100
 
 type MusicFile struct {
-	FilePath      string
-	FileExtension string
+	Path      string
+	Extension string
 }
 
 func Init() {
@@ -35,38 +35,41 @@ func Init() {
 }
 
 func Play() {
-	queue, err := LoadMusicFiles()
-	Shuffle(&queue)
+	musicQueue, err := LoadMusicFiles()
+	if err != nil {
+		log.Fatal(err)
+	}
+	ShuffleQueue(&musicQueue)
 
 	for true {
-		queue_length := len(queue)
+		queue_length := len(musicQueue)
 
 		if queue_length == 0 {
-			queue, err = LoadMusicFiles()
+			musicQueue, err = LoadMusicFiles()
 			if err != nil {
 				log.Print(err)
 			}
+			ShuffleQueue(&musicQueue)
 
-			Shuffle(&queue)
-			queue_length = len(queue)
+			queue_length = len(musicQueue)
 		}
 
 		var streamer beep.StreamSeekCloser
 		var format beep.Format
-		f, ext := getFromQueue(queue)
+		currentFile, currentFileExtension := getFromQueue(musicQueue)
 
-		fm := getMetadata(queue)
+		fm := getMetadata(musicQueue)
 		fmt.Println(fm.Title())
 		fmt.Println(fm.Album())
 		fmt.Println(fm.Artist())
 		fmt.Println(fm.Genre())
 		fmt.Println(fm.Year())
 
-		switch ext {
+		switch currentFileExtension {
 		case ".flac":
-			streamer, format = decodeFLAC(f)
+			streamer, format = decodeFLAC(currentFile)
 		case ".mp3":
-			streamer, format = decodeMP3(f)
+			streamer, format = decodeMP3(currentFile)
 		}
 		defer streamer.Close()
 
@@ -79,13 +82,13 @@ func Play() {
 
 		<-done
 
-		queue = queue[1:queue_length]
+		musicQueue = musicQueue[1:queue_length]
 
 	}
 }
 
 func getMetadata(q []MusicFile) (t *taglib.File) {
-	f, err := taglib.Read(q[0].FilePath)
+	f, err := taglib.Read(q[0].Path)
 	if err != nil {
 		fmt.Printf("Error reading file: %v\n", err)
 		return
@@ -136,17 +139,17 @@ func LoadMusicFiles() ([]MusicFile, error) {
 }
 
 func getFromQueue(files []MusicFile) (*os.File, string) {
-	file_path := files[0].FilePath
+	file_path := files[0].Path
 	f, err := os.Open(file_path)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	return f, files[0].FileExtension
+	return f, files[0].Extension
 }
 
 /* Fisher-Yates algorithm */
-func Shuffle(files *[]MusicFile) {
+func ShuffleQueue(files *[]MusicFile) {
 	last_index := len(*files) - 1
 	for true {
 		if last_index <= 0 {
@@ -162,5 +165,5 @@ func Shuffle(files *[]MusicFile) {
 		last_index -= 1
 	}
 
-	fmt.Println("Shuffled:", files)
+	fmt.Println("Shuffled Queue:", files)
 }
