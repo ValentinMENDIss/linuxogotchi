@@ -35,7 +35,7 @@ func Init() {
 }
 
 func Play() {
-	musicQueue, err := LoadMusicFiles()
+	musicQueue, err := LoadMusicQueue()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -45,7 +45,7 @@ func Play() {
 		queue_length := len(musicQueue)
 
 		if queue_length == 0 {
-			musicQueue, err = LoadMusicFiles()
+			musicQueue, err = LoadMusicQueue()
 			if err != nil {
 				log.Print(err)
 			}
@@ -114,8 +114,8 @@ func decodeMP3(f *os.File) (streamer beep.StreamSeekCloser, format beep.Format) 
 	return streamer, format
 }
 
-func LoadMusicFiles() ([]MusicFile, error) {
-	var files []MusicFile
+func LoadMusicQueue() ([]MusicFile, error) {
+	var q []MusicFile
 
 	err := filepath.WalkDir(MUSIC_DIR, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
@@ -125,45 +125,45 @@ func LoadMusicFiles() ([]MusicFile, error) {
 			switch filepath.Ext(entry.Name()) {
 			case ".flac":
 				music_file := MusicFile{path, filepath.Ext(entry.Name())}
-				files = append(files, music_file)
+				q = append(q, music_file)
 			case ".mp3":
 				music_file := MusicFile{path, filepath.Ext(entry.Name())}
-				files = append(files, music_file)
+				q = append(q, music_file)
 			}
 		}
 
 		return nil
 	})
 
-	return files, err
+	return q, err
 }
 
-func getFromQueue(files []MusicFile) (*os.File, string) {
-	file_path := files[0].Path
+func getFromQueue(q []MusicFile) (*os.File, string) {
+	file_path := q[0].Path
 	f, err := os.Open(file_path)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	return f, files[0].Extension
+	return f, q[0].Extension
 }
 
 /* Fisher-Yates algorithm */
-func ShuffleQueue(files *[]MusicFile) {
-	last_index := len(*files) - 1
+func ShuffleQueue(q *[]MusicFile) {
+	last_index := len(*q) - 1
 	for true {
 		if last_index <= 0 {
 			break
 		}
 
-		rand_index := rand.Intn(len(*files))
+		rand_index := rand.Intn(len(*q))
 
-		buffer := (*files)[rand_index]
-		(*files)[rand_index] = (*files)[last_index]
-		(*files)[last_index] = buffer
+		buffer := (*q)[rand_index]
+		(*q)[rand_index] = (*q)[last_index]
+		(*q)[last_index] = buffer
 
 		last_index -= 1
 	}
 
-	fmt.Println("Shuffled Queue:", files)
+	fmt.Println("Shuffled Queue:", q)
 }
