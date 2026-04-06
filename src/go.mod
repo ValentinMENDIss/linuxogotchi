@@ -2,7 +2,10 @@ module github.com/ValentinMENDIss/linuxogotchi
 
 go 1.25.5
 
-require github.com/gopxl/beep v1.4.1
+require (
+	github.com/gopxl/beep v1.4.1
+	github.com/wtolson/go-taglib v0.0.0-20210406152913-79209c280058
+)
 
 require (
 	github.com/ebitengine/oto/v3 v3.1.0 // indirect

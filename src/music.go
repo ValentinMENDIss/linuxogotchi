@@ -15,6 +15,8 @@ import (
 	"github.com/gopxl/beep/flac"
 	"github.com/gopxl/beep/mp3"
 	"github.com/gopxl/beep/speaker"
+
+	"github.com/wtolson/go-taglib"
 )
 
 // TODO:
@@ -52,6 +54,14 @@ func Play() {
 		var streamer beep.StreamSeekCloser
 		var format beep.Format
 		f, ext := getFromQueue(queue)
+
+		fm := getMetadata(queue)
+		fmt.Println(fm.Title())
+		fmt.Println(fm.Album())
+		fmt.Println(fm.Artist())
+		fmt.Println(fm.Genre())
+		fmt.Println(fm.Year())
+
 		switch ext {
 		case ".flac":
 			streamer, format = decodeFLAC(f)
@@ -72,7 +82,15 @@ func Play() {
 		queue = queue[1:queue_length]
 
 	}
+}
 
+func getMetadata(q []MusicFile) (t *taglib.File) {
+	f, err := taglib.Read(q[0].FilePath)
+	if err != nil {
+		fmt.Printf("Error reading file: %v\n", err)
+		return
+	}
+	return f
 }
 
 func decodeFLAC(f *os.File) (streamer beep.StreamSeekCloser, format beep.Format) {
